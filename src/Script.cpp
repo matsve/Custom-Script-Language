@@ -270,7 +270,19 @@ namespace Script
 							{
 								if (IsType(CParen.Memory))
 								{
-									if (CParen.Memory == "func" && Char == "(")
+									if (CParen.Memory == "if" && Char == ";")
+									{
+									}
+									else if (CParen.Memory == "else" && Char == ";")
+									{
+									}
+									else if (CParen.Memory == "elseif" && Char == ";")
+									{
+									}
+									else if (CParen.Memory == "return" && Char == ";")
+									{
+									}
+									else if (CParen.Memory == "func" && Char == "(")
 									{
 										//declare function
 										//if (Msg(MSGL_DEBUG)) printf("Debug at %s: Declaring function %s %s.\n", StringPosition().c_str(), CParen.Memory.c_str(), CParen.Keyword.c_str());
@@ -577,6 +589,10 @@ namespace Script
 
     bool IsType(std::string str)
     {
+        if (str == "if") return true;
+        if (str == "else") return true;
+        if (str == "elseif") return true;
+        if (str == "return") return true;
         if (str == "int") return true;
         if (str == "string") return true;
         if (str == "bool") return true;
