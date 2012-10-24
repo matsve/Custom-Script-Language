@@ -1,2 +1,16 @@
 int testvar = (12+7-(2*3));
-bool testbl = false;
+bool testbl = true;
+string teststr = ("1" & "2" & "3" & ("4" & "50"));
+
+func myf(string ind){
+	return ("got("&ind&")");
+};
+
+if (testbl);
+{
+	string be = myf("test");
+}
+else ();
+{
+	string be = myf("qwer");
+}

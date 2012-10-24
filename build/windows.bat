@@ -9,6 +9,7 @@ echo     1. Build Debug
 echo     2. Build Release
 echo.
 echo     5. Clean
+echo     6. Run debug
 echo.
 echo   Project
 echo     10. Create for GNU Make
@@ -22,6 +23,7 @@ if "%INPUT%"=="0" goto theendreally
 if "%INPUT%"=="1" goto build_debug
 if "%INPUT%"=="2" goto build_release
 if "%INPUT%"=="5" goto build_clean
+if "%INPUT%"=="6" goto build_run
 if "%INPUT%"=="10" goto proj_gmake
 
 echo Wrong input!
@@ -42,6 +44,14 @@ goto theend
 :build_clean
 mingw32-make clean config=debug
 mingw32-make clean config=release
+goto theend
+
+:build_run
+echo Running program...
+cd bin
+CSLProgram-Debug
+cd..
+echo Done running
 goto theend
 
 :proj_gmake

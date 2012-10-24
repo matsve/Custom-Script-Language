@@ -119,6 +119,8 @@ namespace Script
     std::string Bool2Str( bool abool );
     float Str2Float( std::string str );
     std::string Float2Str( float afloat );
+    bool IsStr(std::string instr);
+    std::string UnStr(std::string instr);
     std::vector<std::string> CropStrList(std::vector<std::string> List, int x, int y, int tox, int toy);
 };
 

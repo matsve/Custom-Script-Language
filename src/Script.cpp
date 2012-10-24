@@ -142,6 +142,7 @@ namespace Script
     {
         std::string Char;
 		bool DidP = false, DidB = false, DidD = false;
+		int ScopeLevels = Scopes.size();
         PushScope();
         for (CScope.Row = 0; CScope.Row < Data.size(); CScope.Row++)
         {
@@ -174,6 +175,7 @@ namespace Script
                     if (Char == "\"" && !CParen.Escape)
                     {
                         CScope.String = false;
+                        CParen.Keyword = "\"" + CParen.Keyword + "\"";
                         //if (Msg(MSGL_DEBUG)) printf("Debug at %s: Got string '%s'.\n", StringPosition().c_str(),CParen.Keyword.c_str());
                     }
                     else if (Char == "\\" && !CParen.Escape)
@@ -272,15 +274,40 @@ namespace Script
 								{
 									if (CParen.Memory == "if" && Char == ";")
 									{
+										bool BoolParam = Str2Bool(GetVar(CParen.Keyword));
+										CScope.ExecnextScope = BoolParam;
+										CScope.DidRun = BoolParam;
+											
 									}
 									else if (CParen.Memory == "else" && Char == ";")
 									{
+										bool Do = CScope.DidRun ? false : true;
+										CScope.ExecnextScope = Do;
 									}
 									else if (CParen.Memory == "elseif" && Char == ";")
 									{
+										bool BoolParam = Str2Bool(GetVar(CParen.Keyword));
+										bool DidRun = CScope.DidRun;
+								
+										if (DidRun)
+										{
+											CScope.ExecnextScope = false;
+										}
+										else
+										{
+											CScope.ExecnextScope = BoolParam;
+											CScope.DidRun = BoolParam;
+										}
 									}
 									else if (CParen.Memory == "return" && Char == ";")
 									{
+										std::string StrVal = GetVar(CParen.Keyword);
+										while (Scopes.size() > ScopeLevels)
+										{
+											PopScope();
+										}
+										CParen.Keyword = StrVal;
+										return true;
 									}
 									else if (CParen.Memory == "func" && Char == "(")
 									{
@@ -313,7 +340,7 @@ namespace Script
 										}
 										CParen.Keyword = "";
 									}
-									else
+									else if (CParen.Memory != "if" && CParen.Memory != "else" && CParen.Memory != "elseif" && CParen.Memory != "return")
 									{
 										if (Msg(MSGL_WARNING)) printf("Warning at %s: No symbol name specified!\n", StringPosition().c_str());
 									}
@@ -323,9 +350,9 @@ namespace Script
 									//printf("assigning\n");
 									std::string TLeft = CParen.Memory;
 									std::string TRight = CParen.Keyword;
-									if (IsVar(CParen.Memory))
+									//if (IsVar(CParen.Memory))
 										TLeft = GetVar(CParen.Memory);
-									if (IsVar(CParen.Keyword))
+									//if (IsVar(CParen.Keyword))
 										TRight = GetVar(CParen.Keyword);
 									printf("    d@%s: assigning values '%s' '%s' '%s'\n", StringPosition().c_str(), (CParen.Operator == "=" ? CParen.Memory.c_str() : TLeft.c_str()), CParen.Operator.c_str(), TRight.c_str());
 									if (CParen.Operator == "=")
@@ -350,7 +377,7 @@ namespace Script
 									}
 									else if (CParen.Operator == "&")
 									{
-										CParen.Memory = TLeft + TRight;
+										CParen.Memory = "\"" + TLeft + TRight + "\"";
 									}
 									else if (CParen.Operator == "&&")
 									{
@@ -406,10 +433,10 @@ namespace Script
 										{
 											Variable TV;
 											TV.Type = TYPE_NONE;
-											if (IsVar(CParen.Keyword))
+											//if (IsVar(CParen.Keyword))
 												TV.StringValue = GetVar(CParen.Keyword);
-											else
-												TV.StringValue = CParen.Keyword;
+											//else
+											//	TV.StringValue = CParen.Keyword;
 											CParen.FuncCall.Vars.push_back(TV);
 											//printf("_____VALUE:'%s'\n", CParen.Keyword.c_str());
 											CParen.Keyword = "";
@@ -641,9 +668,13 @@ namespace Script
 	bool IsVar(std::string VarName) { return (Variables.find(VarName) == Variables.end()) ? false : true; }
 	std::string GetVar(std::string VarName)
 	{
-		if (Variables.find(VarName) == Variables.end())
+		if (IsStr(VarName))
 		{
-			return "";
+			return UnStr(VarName);
+		}
+		else if (Variables.find(VarName) == Variables.end())
+		{
+			return VarName;
 		}
 		else
 		{
@@ -726,6 +757,21 @@ namespace Script
     std::string Bool2Str( bool abool ) { if ( abool ) return "true"; else return "false"; }
     float Str2Float( std::string str ) { return (float)strtod( str.c_str(), NULL ); }
     std::string Float2Str( float afloat ) { std::stringstream ss; ss << afloat; return ss.str(); }
+    bool IsStr(std::string instr)
+    {
+	    return (instr.substr(0,1) == "\"" && instr.substr(instr.size()-1) == "\"") ? true : false;
+    }
+    std::string UnStr(std::string instr)
+    {
+	    if (IsStr(instr))
+	    {
+		    return instr.substr(1, instr.size()-2);
+	    }
+	    else
+	    {
+		    return instr;
+	    }
+    }
     std::vector<std::string> CropStrList(std::vector<std::string> List, int x, int y, int tox, int toy)
     {
         std::vector<std::string> trg;
