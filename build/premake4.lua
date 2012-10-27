@@ -10,7 +10,7 @@ solution "CSL"
       --links { "zlib" }
       --location "projectpath"
       targetdir "bin"
- 
+
       configuration "Debug"
          defines { "DEBUG" }
          flags { "Symbols" }

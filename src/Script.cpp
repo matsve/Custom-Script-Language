@@ -7,6 +7,7 @@ namespace Script
     int MessageLevel = MSGL_INFO;
 	std::map<std::string, Variable> Variables;
 	std::map<std::string, Function> Functions;
+	std::map<std::string, ExternalType> ExternalTypes;
 
     void Init()
     {
@@ -15,6 +16,7 @@ namespace Script
 		// Setup default scope, which should not be removed
 		// until breaking down script class
         PushScope();
+        BindExternalType("file", &File_Init, &File_Assign, &File_AsString, &File_Delete);
     }
     void SetMessageLevel(int nMessageLevel)
     {
@@ -80,6 +82,15 @@ namespace Script
         else
             if (Msg(MSGL_WARNING)) printf("Warning at %s! Tried to pop last parenthesis!\n", StringPosition().c_str());
     }
+    void BindExternalType(std::string newName, void (*newInit)(std::string Name), void (*newAssign)(std::string Name, std::string Value), std::string (*newAsString)(std::string Name), void (*newDelete)(std::string Name))
+    {
+    	ExternalType tmp;
+    	tmp.Init = newInit;
+    	tmp.Assign = newAssign;
+    	tmp.AsString = newAsString;
+    	tmp.Delete = newDelete;
+    	ExternalTypes[newName] = tmp;
+	}
 	void BindNativeFunction(std::string Name, int MinParam, int MaxParam, std::string (*NewFunction)(FunctionCall Data))
 	{
 		printf("Adding function '%s'\n",Name.c_str());
@@ -101,6 +112,22 @@ namespace Script
 		MyFunc.MinParam = Params.size();
 		MyFunc.MaxParam = -1;
 		Functions[Name] = MyFunc;
+	}
+	bool IsFunc(std::string FuncName)
+	{
+		return (Functions.find(FuncName) != Functions.end());
+	}
+	bool RemFunc(std::string FuncName)
+	{
+		if (Functions.find(FuncName) == Functions.end())
+		{
+			return false;
+		}
+		else
+		{
+			Functions.erase(FuncName);
+			return true;
+		}
 	}
 
     bool ParseString(std::string String)
@@ -320,6 +347,21 @@ namespace Script
 										CParen.FuncCall.FunctionName = Temp;
 										CParen.Expect = EXPECT_PARAM_LIST;
 									}
+									else if (CParen.Memory == "delete" && Char == ";")
+									{
+										if (IsVar(CParen.Keyword))
+										{
+											RemVar(CParen.Keyword);
+										}
+										else if (IsFunc(CParen.Keyword))
+										{
+											RemFunc(CParen.Keyword);
+										}
+										else
+										{
+											// Cannot remove any more
+										}
+									}
 									else if (CParen.Memory.size() > 0 && CParen.Keyword.size() > 0)
 									{
 										//declare variable
@@ -340,7 +382,7 @@ namespace Script
 										}
 										CParen.Keyword = "";
 									}
-									else if (CParen.Memory != "if" && CParen.Memory != "else" && CParen.Memory != "elseif" && CParen.Memory != "return")
+									else if (!IsType(CParen.Memory))
 									{
 										if (Msg(MSGL_WARNING)) printf("Warning at %s: No symbol name specified!\n", StringPosition().c_str());
 									}
@@ -625,6 +667,8 @@ namespace Script
         if (str == "bool") return true;
         if (str == "float") return true;
         if (str == "func") return true;
+        if (str == "delete") return true;
+        if (ExternalTypes.find(str) != ExternalTypes.end()) return true;
         return false;
     }
 	int Str2Type(std::string Type)
@@ -633,6 +677,7 @@ namespace Script
 		if (Type == "bool") return TYPE_BOOL;
 		if (Type == "float") return TYPE_FLOAT;
 		if (Type == "func") return TYPE_FUNC;
+		if (ExternalTypes.find(Type) != ExternalTypes.end()) return TYPE_EXTERNAL;
 		//if (Type == "string") return TYPE_STRING;
 		return TYPE_STRING;
 	}
@@ -648,6 +693,8 @@ namespace Script
 				return "float";
 			case TYPE_FUNC:
 				return "func";
+			case TYPE_EXTERNAL:
+				return "external";
 			//case TYPE_STRING:
 			//	return "string";
 			default:
@@ -666,6 +713,19 @@ namespace Script
 	}
 
 	bool IsVar(std::string VarName) { return (Variables.find(VarName) == Variables.end()) ? false : true; }
+	bool RemVar(std::string VarName)
+	{
+		if (Variables.find(VarName) == Variables.end())
+		{
+			return false;
+		}
+		else
+		{
+			if (Variables[VarName].Type == TYPE_EXTERNAL) Variables[VarName].Ext->Delete(VarName);
+			Variables.erase(VarName);
+			return true;
+		}
+	}
 	std::string GetVar(std::string VarName)
 	{
 		if (IsStr(VarName))
@@ -687,6 +747,8 @@ namespace Script
 					return Bool2Str(TVar.BoolValue);
 				case TYPE_FLOAT:
 					return Float2Str(TVar.FloatValue);
+				case TYPE_EXTERNAL:
+					return TVar.Ext->AsString(VarName);
 				default:
 					return TVar.StringValue;
 			}
@@ -706,6 +768,7 @@ namespace Script
 	std::string *GetStringPtr(std::string VarName) { if (Variables.find(VarName) == Variables.end()) { return 0; } else { return &Variables[VarName].StringValue; } }
 	bool SetVar(std::string VarName, std::string VarType, std::string Value)
 	{
+		//printf("SETVAR n:'%s' t:'%s' v:'%s'\n", VarName.c_str(), VarType.c_str(), Value.c_str());
 		if (VarType == "int")
 		{
 			return SetInt(VarName, Str2Int(Value));
@@ -720,7 +783,16 @@ namespace Script
 		}
 		else
 		{
-			if (VarType != "string")
+			if (ExternalTypes.find(VarType) != ExternalTypes.end())
+			{
+				bool res = SetString(VarName, Value);
+				Variables[VarName].Ext = &ExternalTypes[VarType];
+				Variables[VarName].Type = TYPE_EXTERNAL;
+				if (!res) Variables[VarName].Ext->Init(VarName);
+				Variables[VarName].Ext->Assign(VarName, Value);
+				return res;
+			}
+			else if (VarType != "string")
 			{
 				// warning message
 			}
@@ -743,6 +815,9 @@ namespace Script
 					return;
 				case TYPE_FLOAT:
 					Variables[VarName].FloatValue = Str2Float(Value);
+					return;
+				case TYPE_EXTERNAL:
+					Variables[VarName].Ext->Assign(VarName, Value);
 					return;
 				default:
 					Variables[VarName].StringValue = Value;
@@ -787,5 +862,23 @@ namespace Script
         //for (unsigned int i = 0; i < trg.size(); i++) printf("        %s\n",trg.at(i).c_str());
         return trg;
     }
+
+    void File_Init(std::string Name)
+    {
+    	printf("        Creating file '%s'\n", Name.c_str());
+	}
+	void File_Assign(std::string Name, std::string Value)
+	{
+    	printf("        Assigning file '%s' to path '%s'\n", Name.c_str(), Value.c_str());
+	}
+	std::string File_AsString(std::string Name)
+	{
+    	printf("        Getting file from '%s'\n", Name.c_str());
+		return "dummy";
+	}
+	void File_Delete(std::string Name)
+	{
+    	printf("        Deleting file '%s'\n", Name.c_str());
+	}
 
 }

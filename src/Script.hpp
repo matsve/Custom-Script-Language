@@ -15,7 +15,7 @@ namespace Script
 {
     enum MessageLevels {MSGL_DEBUG, MSGL_INFO, MSGL_WARNING, MSGL_ERROR};
     enum Expect {EXPECT_NONE, EXPECT_PARAM_LIST, EXPECT_VALUE};
-	enum Types {TYPE_INT, TYPE_FLOAT, TYPE_BOOL, TYPE_STRING, TYPE_FUNC, TYPE_NONE};
+	enum Types {TYPE_INT, TYPE_FLOAT, TYPE_BOOL, TYPE_STRING, TYPE_FUNC, TYPE_NONE, TYPE_EXTERNAL};
 	enum Record {RECORD_LOOP, RECORD_FUNC};
 
     struct File
@@ -23,12 +23,21 @@ namespace Script
         std::string Filename;
         std::vector<std::string> Data;
     };
+	struct ExternalType
+	{
+		std::string Name;
+		void (*Init)(std::string Name);
+		void (*Assign)(std::string Name, std::string Value);
+		std::string (*AsString)(std::string Name);
+		void (*Delete)(std::string Name);
+	};
 	struct Variable
 	{
 		int Type, IntValue;
 		bool BoolValue;
 		float FloatValue;
-		std::string StringValue, Name;
+		std::string StringValue, Name; //stringvalue is external type name
+		ExternalType *Ext;
 	};
 	struct FunctionCall;
 	struct Parameter{std::string Type, Name;};
@@ -71,6 +80,7 @@ namespace Script
     extern int MessageLevel;
 	extern std::map<std::string, Variable> Variables;
 	extern std::map<std::string, Function> Functions;
+	extern std::map<std::string, ExternalType> ExternalTypes;
 
     void Init();
     void SetMessageLevel(int nMessageLevel);
@@ -82,8 +92,11 @@ namespace Script
     void PushParen();
     void PopParen();
 
+	void BindExternalType(std::string newName, void (*newInit)(std::string Name), void (*newAssign)(std::string Name, std::string Value), std::string (*newAsString)(std::string Name), void (*newDelete)(std::string Name));
 	void BindNativeFunction(std::string Name, int MinParam, int MaxParam, std::string (*NewFunction)(FunctionCall Data));
 	void BindUserFunction(std::string Name, std::vector<Parameter> Params, std::vector<std::string> TextCode);
+	bool IsFunc(std::string FuncName);
+	bool RemFunc(std::string FuncName);
 
     bool ParseString(std::string String);
     bool ParseFile(std::string Filename, bool Forcereload = false);
@@ -97,6 +110,7 @@ namespace Script
 	bool IsAssagnChar(std::string Char);
 
 	bool IsVar(std::string VarName);
+	bool RemVar(std::string VarName);
 	std::string GetVar(std::string VarName);
 	bool SetInt(std::string VarName, int Value);
 	int GetInt(std::string VarName, int DefaultValue);
@@ -122,6 +136,11 @@ namespace Script
     bool IsStr(std::string instr);
     std::string UnStr(std::string instr);
     std::vector<std::string> CropStrList(std::vector<std::string> List, int x, int y, int tox, int toy);
+    
+    void File_Init(std::string Name);
+	void File_Assign(std::string Name, std::string Value);
+	std::string File_AsString(std::string Name);
+	void File_Delete(std::string Name);
 };
 
 #endif // SCRIPT_HPP

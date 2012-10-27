@@ -1,16 +1,27 @@
 int testvar = (12+7-(2*3));
 bool testbl = true;
 string teststr = ("1" & "2" & "3" & ("4" & "50"));
+file MyFile = "test.txt";	// Call Init("MyFile") followed by assign("MyFile", "test.txt")
+teststr = MyFile;			// Call AsString("MyFile")
+delete MyFile;				// Call Delete("MyFile")
 
-func myf(string ind){
+
+func myf(string ind, file tef){
+	string tep = tef;
 	return ("got("&ind&")");
 };
 
 if (testbl);
 {
-	string be = myf("test");
+	string be = myf("test", "t");
 }
 else ();
 {
-	string be = myf("qwer");
+	string be = myf("qwer", "t");
 }
+
+delete teststr;
+delete testbl;
+delete testvar;
+delete be;
+delete tep;
