@@ -1,0 +1,4 @@
+// Auto generated settings file, do not edit manually
+int ScreenWidth = 320;
+int ScreenHeight = 240;
+bool FullScreen = false;

@@ -8,6 +8,8 @@ namespace Script
 	std::map<std::string, Variable> Variables;
 	std::map<std::string, Function> Functions;
 	std::map<std::string, ExternalType> ExternalTypes;
+	std::map<std::string, std::ofstream*> OFFiles;
+	std::map<std::string, List> Lists;
 
     void Init()
     {
@@ -16,7 +18,8 @@ namespace Script
 		// Setup default scope, which should not be removed
 		// until breaking down script class
         PushScope();
-        BindExternalType("file", &File_Init, &File_Assign, &File_AsString, &File_Delete);
+        BindExternalType("outfile", &OutFile_Init, &OutFile_Assign, &OutFile_AsString, &OutFile_Delete);
+        BindNativeFunction("write", 2, 3, &OutFile_Write);
     }
     void SetMessageLevel(int nMessageLevel)
     {
@@ -33,6 +36,9 @@ namespace Script
 		printf("vars[%d]\n", Variables.size());
         Scopes.clear();
         Files.clear();
+        ExternalTypes.clear();
+        Variables.clear();
+        Functions.clear();
     }
 
     void PushScope(bool ExecScope)
@@ -304,7 +310,6 @@ namespace Script
 										bool BoolParam = Str2Bool(GetVar(CParen.Keyword));
 										CScope.ExecnextScope = BoolParam;
 										CScope.DidRun = BoolParam;
-											
 									}
 									else if (CParen.Memory == "else" && Char == ";")
 									{
@@ -362,6 +367,11 @@ namespace Script
 											// Cannot remove any more
 										}
 									}
+									else if (CParen.Memory == "include" && Char == ";")
+									{
+										std::string StrVal = GetVar(CParen.Keyword);
+										ParseFile(StrVal);
+									}
 									else if (CParen.Memory.size() > 0 && CParen.Keyword.size() > 0)
 									{
 										//declare variable
@@ -387,7 +397,7 @@ namespace Script
 										if (Msg(MSGL_WARNING)) printf("Warning at %s: No symbol name specified!\n", StringPosition().c_str());
 									}
 								}
-								else if (CParen.Memory.size() > 0 && CParen.Keyword.size() > 0 && CParen.Operator.size() > 0 && Char != "(")
+								else if (CParen.Memory.size() > 0 && CParen.Keyword.size() > 0 && CParen.Operator.size() > 0 && Char != "(" && Char != ":")
 								{
 									//printf("assigning\n");
 									std::string TLeft = CParen.Memory;
@@ -396,7 +406,7 @@ namespace Script
 										TLeft = GetVar(CParen.Memory);
 									//if (IsVar(CParen.Keyword))
 										TRight = GetVar(CParen.Keyword);
-									printf("    d@%s: assigning values '%s' '%s' '%s'\n", StringPosition().c_str(), (CParen.Operator == "=" ? CParen.Memory.c_str() : TLeft.c_str()), CParen.Operator.c_str(), TRight.c_str());
+									if (Msg(MSGL_DEBUG)) printf("    d@%s: assigning values '%s' '%s' '%s'\n", StringPosition().c_str(), (CParen.Operator == "=" ? CParen.Memory.c_str() : TLeft.c_str()), CParen.Operator.c_str(), TRight.c_str());
 									if (CParen.Operator == "=")
 									{
 										SetVar(CParen.Memory, TRight);
@@ -456,16 +466,61 @@ namespace Script
 									CParen.Keyword = "";
 									CParen.Operator = "";
 								}
-								else if (/*CParen.Memory.size() < 1 &&*/ CParen.Keyword.size() > 0 && Char == "(")
+								else if (/*CParen.Memory.size() < 1 &&*/ CParen.Keyword.size() > 0 && (Char == "(" || Char == ":"))
 								{
 									// start function call
-									//if (Msg(MSGL_DEBUG)) printf("Debug at %s: Starting function call to %s.\n", StringPosition().c_str(), CParen.Keyword.c_str());
-									std::string TFN = CParen.Keyword;
+									if (Msg(MSGL_DEBUG)) printf("Debug at %s: Starting function call to '%s' with '%s' isf:%s.\n", StringPosition().c_str(), CParen.Keyword.c_str(), Char.c_str(), CParen.Funccall?"true":"false");
+									if (CParen.Funccall)
+									{
+										if (Char == "(")
+										{
+											DidP = true;
+											CParen.FuncCall.FunctionName = CParen.Keyword;
+											CParen.Expect = EXPECT_VALUE;
+											CParen.Keyword = "";
+										}
+										else
+										{
+											Variable tvar;
+											tvar.Type = TYPE_STRING;
+											tvar.StringValue = CParen.Keyword;
+											tvar.Name = CParen.Keyword;
+											CParen.FuncCall.Vars.push_back(tvar);
+											CParen.Expect = EXPECT_VALUE;
+											CParen.Keyword = "";
+										}
+									}
+									else
+									{
+										if (Char == "(")
+										{
+											std::string TFN = CParen.Keyword;
+											PushParen();
+											DidP = true;
+											CParen.Funccall = true;
+											CParen.FuncCall.FunctionName = TFN;
+											CParen.Expect = EXPECT_VALUE;
+										}
+										else
+										{
+											Variable tvar;
+											tvar.Type = TYPE_STRING;
+											tvar.StringValue = CParen.Keyword;
+											tvar.Name = CParen.Keyword;
+											CParen.Keyword = "";
+											PushParen();
+											CParen.Funccall = true;
+											CParen.FuncCall.Vars.push_back(tvar);
+											CParen.Expect = EXPECT_NONE;
+											CParen.Expect = EXPECT_VALUE;
+										}
+									}
+									/*std::string TFN = CParen.Keyword;
 									PushParen();
 									DidP = true;
 									CParen.Funccall = true;
 									CParen.FuncCall.FunctionName = TFN;
-									CParen.Expect = EXPECT_VALUE;
+									CParen.Expect = EXPECT_VALUE;*/
 								}
 								else if (CParen.Memory.size() < 1)
 								{
@@ -668,6 +723,7 @@ namespace Script
         if (str == "float") return true;
         if (str == "func") return true;
         if (str == "delete") return true;
+        if (str == "include") return true;
         if (ExternalTypes.find(str) != ExternalTypes.end()) return true;
         return false;
     }
@@ -703,10 +759,10 @@ namespace Script
 	}
 	bool IsProcessChar(std::string Char)
 	{
-		std::string Chars = " =+-*/&|*;!<>(),\t\n\r\"";
+		std::string Chars = " =+-*/&|*:;!<>(),\t\n\r\"";
 		return (Chars.find(Char) == Chars.npos) ? false : true;
 	}
-	bool IsAssagnChar(std::string Char)
+	bool IsAssignChar(std::string Char)
 	{
 		std::string Chars = "+-*/&!<>|=";
 		return (Chars.find(Char) == Chars.npos) ? false : true;
@@ -863,22 +919,74 @@ namespace Script
         return trg;
     }
 
-    void File_Init(std::string Name)
+    void OutFile_Init(std::string Name)
     {
-    	printf("        Creating file '%s'\n", Name.c_str());
+	    std::ofstream tempf;
+	    //OFFiles[Name] = tempf;
 	}
-	void File_Assign(std::string Name, std::string Value)
+	void OutFile_Assign(std::string Name, std::string Value)
 	{
-    	printf("        Assigning file '%s' to path '%s'\n", Name.c_str(), Value.c_str());
+		OFFiles[Name] = new std::ofstream;
+		OFFiles[Name]->open(Value.c_str());
 	}
-	std::string File_AsString(std::string Name)
+	std::string OutFile_AsString(std::string Name)
 	{
-    	printf("        Getting file from '%s'\n", Name.c_str());
-		return "dummy";
+    	return Name;
 	}
-	void File_Delete(std::string Name)
+	void OutFile_Delete(std::string Name)
 	{
-    	printf("        Deleting file '%s'\n", Name.c_str());
+		if (OFFiles.find(Name) != OFFiles.end())
+		{
+    		OFFiles[Name]->close();
+    		delete OFFiles[Name];
+    	}
+	}
+	std::string OutFile_Write(FunctionCall Data)
+	{
+		std::string Name = Data.Vars.at(0).StringValue;
+		std::string Text = Data.Vars.at(1).StringValue;
+		bool Linefeed = (Data.Vars.size() > 2) ? Str2Bool(Data.Vars.at(2).StringValue) : false;
+		
+		if (OFFiles.find(Name) != OFFiles.end())
+		{
+			std::ofstream *tmp = OFFiles[Name];
+			if (tmp->is_open())
+				tmp->write(Text.c_str(), Text.size());
+			if (Linefeed) tmp->write("\n", 1);
+		}
+
+		return "";
+	}
+	
+	std::string GetListRows(FunctionCall Data)
+	{
+		std::string Name = Data.Vars.at(0).StringValue;
+
+		return Int2Str((int)Lists[Name].Row.size());
+	}
+	std::string GetListColumns(FunctionCall Data)
+	{
+		std::string Name = Data.Vars.at(0).StringValue;
+		int Row = Str2Int(Data.Vars.at(1).StringValue);
+
+		return Int2Str((int)Lists[Name].Row.at(Row).Column.size());
+	}
+	std::string GetListColumn(FunctionCall Data)
+	{
+		std::string Name = Data.Vars.at(0).StringValue;
+		int Row = Str2Int(Data.Vars.at(1).StringValue);
+		int Col = Str2Int(Data.Vars.at(2).StringValue);
+
+		return Lists[Name].Row.at(Row).Column.at(Col);
+	}
+	std::string SetListColumn(FunctionCall Data)
+	{
+		std::string Name = Data.Vars.at(0).StringValue;
+		int Row = Str2Int(Data.Vars.at(1).StringValue);
+		int Col = Str2Int(Data.Vars.at(2).StringValue);
+		std::string Value = Data.Vars.at(3).StringValue;
+
+		Lists[Name].Row.at(Row).Column.at(Col) = Value;
 	}
 
 }

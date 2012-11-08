@@ -1,27 +1,52 @@
-int testvar = (12+7-(2*3));
-bool testbl = true;
-string teststr = ("1" & "2" & "3" & ("4" & "50"));
-file MyFile = "test.txt";	// Call Init("MyFile") followed by assign("MyFile", "test.txt")
-teststr = MyFile;			// Call AsString("MyFile")
-delete MyFile;				// Call Delete("MyFile")
-
-
-func myf(string ind, file tef){
-	string tep = tef;
-	return ("got("&ind&")");
+// Good-to-have function
+func writel(string Var, string Text) {
+	write(Var, Text, true);
 };
 
-if (testbl);
-{
-	string be = myf("test", "t");
-}
-else ();
-{
-	string be = myf("qwer", "t");
-}
+string SettingsFile = "settings.csl";
 
-delete teststr;
-delete testbl;
-delete testvar;
-delete be;
-delete tep;
+func SaveSettings() {
+	outfile MyFile = SettingsFile;
+	MyFile:writel("// Auto generated settings file, do not edit manually");
+	MyFile:writel(("int ScreenWidth = " & ScreenWidth & ";"));
+	MyFile:writel(("int ScreenHeight = " & ScreenHeight & ";"));
+	MyFile:writel(("bool FullScreen = " & FullScreen & ";"));
+	delete MyFile;
+};
+
+// Default values
+int ScreenWidth = 320;
+int ScreenHeight = 240;
+bool FullScreen = false;
+
+// Get settings from file if it exists
+include SettingsFile;
+
+// Do something main programish here...
+int Rows = screen:listrows();
+int Cols = screen:listcols();
+int Row = 0;
+func DoList() {
+	Row = (Row + 1);
+	screen:setcolumn(Row, 1, (screen:getcolumn(Row, 1) + "append1"));
+	screen:setcolumn(Row, 2, (screen:getcolumn(Row, 2) + "append2"));
+	screen:setcolumn(Row, 3, (screen:getcolumn(Row, 3) + "append3"));
+};
+repeat(Rows, "DoList();");
+
+/*
+script has list
+script gui can handle selectable list with varied columns
+render columns range, (2, 4) means from 2 to 4
+*/
+
+// Save the settings
+SaveSettings();
+
+// Delete all trash
+delete ScreenWidth;
+delete ScreenHeight;
+delete FullScreen;
+delete SettingsFile;
+delete Var;
+delete Text;

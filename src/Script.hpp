@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <iostream>
 #include <fstream>
 #include <cstdlib>
 
@@ -23,6 +24,15 @@ namespace Script
         std::string Filename;
         std::vector<std::string> Data;
     };
+    struct List
+    {
+    	int Columns;
+    	struct ListItem
+    	{
+    		std::vector<std::string> Column;
+		};
+    	std::vector<ListItem> Row;
+	};
 	struct ExternalType
 	{
 		std::string Name;
@@ -81,6 +91,8 @@ namespace Script
 	extern std::map<std::string, Variable> Variables;
 	extern std::map<std::string, Function> Functions;
 	extern std::map<std::string, ExternalType> ExternalTypes;
+	extern std::map<std::string, std::ofstream*> OFFiles;
+	extern std::map<std::string, List> Lists;
 
     void Init();
     void SetMessageLevel(int nMessageLevel);
@@ -107,7 +119,7 @@ namespace Script
 	int Str2Type(std::string Type);
 	std::string Type2Str(int Type);
 	bool IsProcessChar(std::string Char);
-	bool IsAssagnChar(std::string Char);
+	bool IsAssignChar(std::string Char);
 
 	bool IsVar(std::string VarName);
 	bool RemVar(std::string VarName);
@@ -137,10 +149,15 @@ namespace Script
     std::string UnStr(std::string instr);
     std::vector<std::string> CropStrList(std::vector<std::string> List, int x, int y, int tox, int toy);
     
-    void File_Init(std::string Name);
-	void File_Assign(std::string Name, std::string Value);
-	std::string File_AsString(std::string Name);
-	void File_Delete(std::string Name);
+    void OutFile_Init(std::string Name);
+	void OutFile_Assign(std::string Name, std::string Value);
+	std::string OutFile_AsString(std::string Name);
+	void OutFile_Delete(std::string Name);
+	std::string OutFile_Write(FunctionCall Data);
+	
+	std::string GetListRows(FunctionCall Data);
+	std::string GetListColumns(FunctionCall Data);
+	std::string GetListColumn(FunctionCall Data);
 };
 
 #endif // SCRIPT_HPP
