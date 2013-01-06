@@ -1047,5 +1047,26 @@ namespace Script
 		}
 		return "false";
 	}
+	bool IsList(std::string Name)
+	{
+		return (Lists.find(Name) != Lists.end());
+	}
+	List GetList(std::string Name)
+	{
+		if (IsList(Name))
+			return Lists[Name];
+		else
+		{
+			List nlist;
+			return nlist;
+		}
+	}
+	List* GetListPtr(std::string Name)
+	{
+		if (IsList(Name))
+			return &Lists[Name];
+		else
+			return NULL;
+	}
 
 }

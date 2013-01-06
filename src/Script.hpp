@@ -164,6 +164,10 @@ namespace Script
 	std::string GetListColumn(FunctionCall Data);
 	std::string ListAdd(FunctionCall Data);
 	std::string InList(FunctionCall Data);
+	
+	bool IsList(std::string Name);
+	List GetList(std::string Name);
+	List* GetListPtr(std::string Name);
 };
 
 #endif // SCRIPT_HPP
