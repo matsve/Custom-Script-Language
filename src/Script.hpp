@@ -155,9 +155,15 @@ namespace Script
 	void OutFile_Delete(std::string Name);
 	std::string OutFile_Write(FunctionCall Data);
 	
+    void List_Init(std::string Name);
+	void List_Assign(std::string Name, std::string Value);
+	std::string List_AsString(std::string Name);
+	void List_Delete(std::string Name);
 	std::string GetListRows(FunctionCall Data);
 	std::string GetListColumns(FunctionCall Data);
 	std::string GetListColumn(FunctionCall Data);
+	std::string ListAdd(FunctionCall Data);
+	std::string InList(FunctionCall Data);
 };
 
 #endif // SCRIPT_HPP

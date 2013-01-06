@@ -19,7 +19,10 @@ namespace Script
 		// until breaking down script class
         PushScope();
         BindExternalType("outfile", &OutFile_Init, &OutFile_Assign, &OutFile_AsString, &OutFile_Delete);
+        BindExternalType("list", &List_Init, &List_Assign, &List_AsString, &List_Delete);
         BindNativeFunction("write", 2, 3, &OutFile_Write);
+        BindNativeFunction("add", 1, -1, &ListAdd);
+        BindNativeFunction("inlist", 2, 2, &InList);
     }
     void SetMessageLevel(int nMessageLevel)
     {
@@ -958,6 +961,28 @@ namespace Script
 		return "";
 	}
 	
+	void List_Init(std::string Name)
+    {
+	    List templ;
+	    //OFFiles[Name] = tempf;
+	    // Dummy
+	}
+	void List_Assign(std::string Name, std::string Value)
+	{
+		List templ;
+		Lists[Name] = templ;
+	}
+	std::string List_AsString(std::string Name)
+	{
+    	return Name;
+	}
+	void List_Delete(std::string Name)
+	{
+		if (Lists.find(Name) != Lists.end())
+		{
+    		Lists.erase(Name);
+    	}
+	}
 	std::string GetListRows(FunctionCall Data)
 	{
 		std::string Name = Data.Vars.at(0).StringValue;
@@ -987,6 +1012,40 @@ namespace Script
 		std::string Value = Data.Vars.at(3).StringValue;
 
 		Lists[Name].Row.at(Row).Column.at(Col) = Value;
+		return Value;
+	}
+	std::string ListAdd(FunctionCall Data)
+	{
+		std::string Name = Data.Vars.at(0).StringValue;
+		List::ListItem li;
+		for (unsigned i = 1; i < Data.Vars.size(); i++ )
+		{
+			li.Column.push_back(Data.Vars.at(i).StringValue);
+		}
+		Lists[Name].Row.push_back(li);
+		return Name;
+	}
+	std::string InList(FunctionCall Data)
+	{
+		std::string Name = Data.Vars.at(0).StringValue;
+		std::string Item = Data.Vars.at(1).StringValue;
+		if (Lists.find(Name) != Lists.end())
+		{
+			printf("found list '%s'\n", Name.c_str());
+			for (unsigned int i = 0; i < Lists[Name].Row.size(); i++)
+			{
+				if (Lists[Name].Row.at(i).Column.size() > 0)
+				{
+					printf("checking col '%s' for '%s'\n", Lists[Name].Row.at(i).Column.at(0).c_str(), Item.c_str());
+					if (Lists[Name].Row.at(i).Column.at(0) == Item)
+					{
+						printf("found\n");
+						return "true";
+					}
+				}
+			}
+		}
+		return "false";
 	}
 
 }
