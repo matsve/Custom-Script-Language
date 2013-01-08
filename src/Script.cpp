@@ -22,6 +22,7 @@ namespace Script
         BindExternalType("list", &List_Init, &List_Assign, &List_AsString, &List_Delete);
         BindNativeFunction("write", 2, 3, &OutFile_Write);
         BindNativeFunction("add", 1, -1, &ListAdd);
+        BindNativeFunction("remove", 2, 2, &ListRemove);
         BindNativeFunction("inlist", 2, 2, &InList);
     }
     void SetMessageLevel(int nMessageLevel)
@@ -1025,21 +1026,38 @@ namespace Script
 		Lists[Name].Row.push_back(li);
 		return Name;
 	}
+	std::string ListRemove(FunctionCall Data)
+	{
+		std::string Name = Data.Vars.at(0).StringValue;
+		std::string Item = Data.Vars.at(1).StringValue;
+		if (Lists.find(Name) != Lists.end())
+		{
+			for (unsigned int i = 0; i < Lists[Name].Row.size(); i++)
+			{
+				if (Lists[Name].Row.at(i).Column.size() > 0)
+				{
+					if (Lists[Name].Row.at(i).Column.at(0) == Item)
+					{
+						Lists[Name].Row.erase(Lists[Name].Row.begin() + i);
+						i--;
+					}
+				}
+			}
+		}
+		return Name;
+	}
 	std::string InList(FunctionCall Data)
 	{
 		std::string Name = Data.Vars.at(0).StringValue;
 		std::string Item = Data.Vars.at(1).StringValue;
 		if (Lists.find(Name) != Lists.end())
 		{
-			printf("found list '%s'\n", Name.c_str());
 			for (unsigned int i = 0; i < Lists[Name].Row.size(); i++)
 			{
 				if (Lists[Name].Row.at(i).Column.size() > 0)
 				{
-					printf("checking col '%s' for '%s'\n", Lists[Name].Row.at(i).Column.at(0).c_str(), Item.c_str());
 					if (Lists[Name].Row.at(i).Column.at(0) == Item)
 					{
-						printf("found\n");
 						return "true";
 					}
 				}

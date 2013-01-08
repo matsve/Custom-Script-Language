@@ -20,6 +20,9 @@ Resolutions:add("320 x 240", 320, 240);
 Resolutions:add("1024 x 600", 1024, 600);
 if (Resolutions:inlist("320 x 240") == false); {
 	Resolutions:add("320 x 240", 320, 240);
+} else (); {
+	Resolutions:remove("320 x 240");
+	Resolutions:add("320 x 240", ":trollface:");
 }
 
 // Default values

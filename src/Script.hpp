@@ -163,6 +163,7 @@ namespace Script
 	std::string GetListColumns(FunctionCall Data);
 	std::string GetListColumn(FunctionCall Data);
 	std::string ListAdd(FunctionCall Data);
+	std::string ListRemove(FunctionCall Data);
 	std::string InList(FunctionCall Data);
 	
 	bool IsList(std::string Name);
