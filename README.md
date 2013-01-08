@@ -17,7 +17,7 @@ if ("this" == "that"); {
 
 To include and use the above script in your application you only need to include '''Script.cpp''' and '''Script.hpp''' in your project and add this to your program:
 
-'''c++
+'''cpp
 #include "Script.hpp"
 
 Script::Init();
