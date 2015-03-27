@@ -50,5 +50,3 @@ OutFile:writel("This is written");		// writes to file
 OutFile:writel("to a file.");
 delete OutFile;					// deletes file handle and closes file
 ```
-
-As for smallness, at current state (9 January 2013) the example program compiles with MinGW at 104 kB, and can be shrinked to an impressive 32.5 kB with the use of UPX. That is not a lot of overhead to be able to read scripts.
