@@ -81,6 +81,10 @@ namespace System.Data.Script
         }
         public Script(string fileName) : base()
         {
+            scopes = new List<Scope>();
+            externalTypes = new Dictionary<string, ExternalType>();
+            functions = new Dictionary<string, Function>();
+            variables = new Dictionary<string, Variable>();
 			this.ParseFile(fileName);
         }
 
@@ -585,7 +589,7 @@ namespace System.Data.Script
 									    {
 										    bool BoolParam = Str2Bool(GetVar(currentParen.keyword));
 										    bool DidRun = currentScope.didRun;
-								
+
 										    if (DidRun)
 										    {
 											    currentScope.execNextScope = false;
@@ -760,6 +764,7 @@ namespace System.Data.Script
 											    string TFN = currentParen.keyword;
 											    PushParen();
 											    DidP = true;
+                                                currentParen.keyword = "";
 											    currentParen.funcCall = true;
 											    currentParen.functionCall.functionName = TFN;
 											    currentParen.expect = EXPECT_VALUE;
