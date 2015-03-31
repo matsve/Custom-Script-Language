@@ -1,0 +1,1 @@
+csc.exe /target:library /out:Script.dll /optimize Script.cs
