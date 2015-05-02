@@ -931,6 +931,7 @@ namespace System.Data.Script
                                         currentParen.keyword = "";
                                         currentParen.oper = "";
                                         currentParen.expect = EXPECT_NONE;
+                                        currentParen.functionCall.variables = new List<Variable>();
 								    }
 								    else if (Char == ",")
 								    {
