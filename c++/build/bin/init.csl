@@ -38,7 +38,7 @@ include SettingsFile;
 // Save the settings
 SaveSettings();
 
-// Delete all trash
+// Delete all trash (you don't really need to in this case, but you can)
 delete ScreenWidth;
 delete ScreenHeight;
 delete FullScreen;

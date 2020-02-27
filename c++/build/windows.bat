@@ -40,7 +40,7 @@ goto theend
 
 :build_debug
 echo Building Debug configuration
-mingw32-make config=debug
+make config=debug
 echo Done with the building
 goto theend
 
